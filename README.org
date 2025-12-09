@@ -1,0 +1,90 @@
+* Peaktech PSU for Emacs
+
+** Overview
+
+This is an Emacs mode to control the [[https://www.peaktech.de/uk/PeakTech-P-6070-Digital-Laboratory-Power-Supply-with-USB/P-6070][PeakTekch P 6070]] - the protocol specification is available in the download section there, and a summary listed below.
+
+[[./screenshot.png]]
+
+The P 6172 and P 6173 should have the same protocol, and also work with this.
+
+P 6075, P 6192 and P 6193 have two channels - adding those extra channels should be trivial, though I don't have hardware to test.
+
+Data from the power supply is polled every =peaktech-psu-poll-interval= seconds (default: 1). This will refresh the display, and call any hooks defined in =peaktech-psu-measurement-hook= - which can be used for collecting statistics.
+
+** Protocol summary
+
+This is mostly copied from the PeakTech documentation, added here for ease of access.
+
+USB-serial, 9600 8N1.
+
+All command payloads consist of a series of two-digit hexadecimal values, forming a core data sequence. Before
+transmission, this sequence must be validated using a CRC-16/MODBUS algorithm in LSB-first format. After CRC
+calculation, the resulting checksum (also referred to as the check code) is appended to the core data sequence,
+followed by a fixed end code (0xFD). The final structure forms the complete data frame, which we refer to as a
+"command".
+
+Accordingly, all values in amps or volts inside a payload are also encoded in hexadecimal format. Examples can
+be found in the relevant sections under “Command Reference” below.
+
+*** Command-Formation Example
+Initial payload: =F7 02 0A 1E 01 00 01=
+
+Payload with the CRC checksum and the end code appended: =F7 02 0A 1E 01 00 01 92 04 FD=
+(A valid command that is ready to be transmitted)
+
+=92 04= is the calculated CRC checksum of the payload above (CRC-16/MODBUS, LSB-first)
+=FD= is the end code
+
+*** Command reference
+**** Output control
+
+Set output to ON:
+| Start code | Address code | Function code | Starting address | Address length | Data | Check code | End code |
+|------------+--------------+---------------+------------------+----------------+------+------------+----------|
+| D0         | D1           | D2            | D3               | D4             | D5D6 | D7D8       | D9       |
+| F7         | 01           | 0A            | 1E               | 01             | 0001 | 9237       | FD       |
+
+
+Set output to OFF:
+| Start code | Address code | Function code | Starting address | Address length | Data | Check code | End code |
+|------------+--------------+---------------+------------------+----------------+------+------------+----------|
+| D0         | D1           | D2            | D3               | D4             | D5D6 | D7D8       | D9       |
+| F7         | 01           | 0A            | 1E               | 01             | 0000 | 9237       | FD       |
+
+**** Read all values
+| Start code | Address code | Function code | Starting address | Address length | Check code | End code |
+|------------+--------------+---------------+------------------+----------------+------------+----------|
+| D0         | D1           | D2            | D3               | D4             | D5D6       | D7       |
+| F7         | 01           | 03            | 04               | 03             | 62E8       | FD       |
+
+**** Response frame
+| Start code | Address code | Function code | Starting address | Address length | Data   | Check code | End code |
+|------------+--------------+---------------+------------------+----------------+--------+------------+----------|
+| D0         | D1           | D2            | D3               | D4             | D5-D10 | D11D12     | D13      |
+| F7         | 01           | 03            | 04               | 03             | ...    | ...        | FD       |
+
+Data fiields:
+| D5 D6  | Status (Output On/Off) |
+| D7 D8  | Voltage (measured)     |
+| D9 D10 | Current (measured)     |
+
+**** Setting voltage
+
+The value in volts must be converted from decimal to hexadecimal.
+For example, 5.14 V corresponds to '02 02' in hexadecimal.
+
+| Start code | Address code | Function code | Starting address | Address length | Data | Check code | End code |
+|------------+--------------+---------------+------------------+----------------+------+------------+----------|
+| D0         | D1           | D2            | D3               | D4             | D5D6 | D7D8       | D9       |
+| F7         | 01           | 0A            | 09               | 01             | 0202 | D6E2       | FD       |
+
+**** Setting current
+
+The value in amperes must be converted from decimal to hexadecimal.
+For example, 0.514 A corresponds to '02 02' in hexadecimal.
+
+| Start code | Address code | Function code | Starting address | Address length | Data | Check code | End code |
+|------------+--------------+---------------+------------------+----------------+------+------------+----------|
+| D0         | D1           | D2            | D3               | D4             | D5D6 | D7D8       | D9       |
+| F7         | 01           | 0A            | 0A               | 01             | 0202 | D6A6       | FD       |
