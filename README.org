@@ -12,6 +12,8 @@ P 6075, P 6192 and P 6193 have two channels - adding those extra channels should
 
 Data from the power supply is polled every =peaktech-psu-poll-interval= seconds (default: 1). This will refresh the display, and call any hooks defined in =peaktech-psu-measurement-hook= - which can be used for collecting statistics.
 
+A sample hook to plot voltage and current over time via [[https://github.com/larsmagne/eplot][eplot]] is included in =peaktech-psu-eplot.el=, and shown in the screenshot above. It logs data as CSV, so [[https://github.com/mhayashi1120/Emacs-pcsv][pcsv]] is also required.
+
 ** Protocol summary
 
 This is mostly copied from the PeakTech documentation, added here for ease of access.
