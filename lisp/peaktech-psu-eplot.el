@@ -25,7 +25,7 @@
 (defvar peaktech-psu-eplot-active nil
   "Track if we should be plotting")
 
-(defvar peaktech-psu-eplot-at nil
+(defcustom peaktech-psu-eplot-at nil
   "Variable to control when the plot should be generated
 
 nil never
